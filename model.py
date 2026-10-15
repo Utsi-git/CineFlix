@@ -1,13 +1,19 @@
-import pickle
+from pathlib import Path
 import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import urllib.request
 import urllib.parse
 import json
 import os
+from config import BASE_DIR
 
-df = pickle.load(open("./prepeared_df.pkl", "rb"))
-count_model = pickle.load(open("./count_model.pkl", "rb"))
+# Build from the checked-in source data, not version-sensitive pickle files.
+df = pd.read_csv(BASE_DIR / "Datasets" / "tmdb.csv", usecols=["title", "release_date", "soup"])
+df = df.dropna(subset=["title"]).reset_index(drop=True)
+df["soup"] = df["soup"].fillna("")
+df["release_date"] = df["release_date"].fillna("")
+count_model = CountVectorizer(stop_words="english")
 
 count_matrix = count_model.fit_transform(df['soup'])
 df = df.reset_index()

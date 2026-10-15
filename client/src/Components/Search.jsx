@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import movie_list from "../movies_list";
 import { Link, useHistory } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../services/api';
 
 const OMDB_BASE_URL = "https://www.omdbapi.com/";
 const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY;

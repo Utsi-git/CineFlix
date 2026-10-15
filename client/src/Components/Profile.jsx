@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from './Spinner';
 
@@ -10,7 +10,7 @@ const AVAILABLE_GENRES = [
 ];
 
 const Profile = () => {
-  const { user, isAuthenticated, openAuthModal, loginDemo, updateProfile, awsStatus, refreshAwsStatus } = useAuth();
+  const { user, isAuthenticated, openAuthModal, loginDemo, updateProfile, refreshProfile, awsStatus, refreshAwsStatus } = useAuth();
   const location = useLocation();
 
   // Parse active tab from URL query params (e.g. ?tab=watchlist)
@@ -112,8 +112,8 @@ const Profile = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data && res.data.avatarUrl) {
-        setProfileMsg('Avatar uploaded to AWS S3 storage!');
-        await updateProfile({ avatarUrl: res.data.avatarUrl });
+        setProfileMsg('Avatar uploaded successfully!');
+        await refreshProfile();
       }
     } catch (err) {
       console.error('Avatar upload failed:', err);

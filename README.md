@@ -1,11 +1,8 @@
-# Movie-Recommendation-System
-This is the Movie Recommendation System, to get personlized movie recommendations for a movie search.
+# CineFlix
 
-<!-- # Realtime Twitter Sentiment Analysis Dashboard
-Twitter Analytics Dashboard -->
-![Homepage](sample/giff.gif)
-
-
+For the corrected local setup, configuration and AWS deployment prerequisites,
+see [AWS_SETUP.md](AWS_SETUP.md). Python 3.11/3.12 is supported. The old setup
+instructions below have been replaced. Authentication uses Flask JWT, not Cognito.
 
 ### Description 
 
@@ -75,46 +72,6 @@ The project **Movie Recommendation System**, uses a **Content-Based** Machine le
 
 The project has several use cases in the industry ranging from, Analysing the sentiment of Users on Twitter for a particular product or service, to managing and proctoring the twitter engagement for tweets related a particular topic. The dashboard can act as a perfect tool for analysing market performance and further deciding the future of the service or product offered. -->
 
-### Setup Process
 
-For setting up the project on a local machine:
-
-* Fork this repository.
-* Clone the repository using simple zip download or use the command
-    ```
-        git clone https://github.com/Kawaljeet2001/Movie-Recommendation-System
-    ```
-* Move to the master branch by using command
-    ```
-        git checkout  master
-    ```
-* Create a virtual environment for the project
-    ```
-        pip install virtualenv
-        for windows: virtualenv -p /usr/bin/python3 env_name
-        for linux(ubuntu): virtualenv env_name
-        
-    ```
-* Activate the Virtual environment
-    ```
-       source env_name/bin/activate
-    ```
-    Once the virtual environment is activated, the name of your virtual environment will appear on left side of terminal. This will let you know that the virtual environment is currently active. 
-
-* Install all the dependencies
-    ```
-       pip install -r requirements.txt
-    ```
-
-* To start the app on the developement server, run the command
-    ```
-        python app.py
-    ```
-
-<!-- 
-**Above Steps are sufficient for running the dashboard and analyzing realtime twitter data sentiment performance. But, for running the preprocessing and training model files, nltk data has to be downloaded to access the utilities. For that use the command:** -->
-<!-- 
-    ```
-        nltk.download()
-    ``` -->
-
+Original base project: https://github.com/Kawaljeet2001/Movie-Recommendation-System
+Document the original source and your group's own changes in your assignment report.

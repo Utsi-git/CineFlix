@@ -2,18 +2,36 @@ import os
 import time
 import uuid
 import hashlib
+import hmac
+import secrets
+from werkzeug.security import generate_password_hash, check_password_hash
+from config import PRODUCTION
 import functools
 import jwt
 from flask import request, jsonify
 from aws_services import aws_manager
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "super-secret-movierecom-jwt-key-2026")
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
+if PRODUCTION and (len(JWT_SECRET) < 32 or any(word in JWT_SECRET.lower() for word in ("super-secret", "change", "your_", "replace"))):
+    raise RuntimeError("Set JWT_SECRET to a unique random value of at least 32 characters")
+if not JWT_SECRET:
+    JWT_SECRET = secrets.token_hex(32)  # Development only; set .env for stable sessions.
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
-def hash_password(password: str, salt: str = "movierecom_salt") -> str:
-    """Hashes a password using SHA-256 with salt."""
-    return hashlib.sha256((password + salt).encode("utf-8")).hexdigest()
+def hash_password(password: str) -> str:
+    return generate_password_hash(password)
+
+
+def verify_password(stored_hash: str, password: str) -> bool:
+    if stored_hash.startswith(("scrypt:", "pbkdf2:")):
+        return check_password_hash(stored_hash, password)
+    # Existing local/cloud users can log in once and be upgraded to scrypt.
+    if len(stored_hash) == 64:
+        legacy = hashlib.sha256((password + "movierecom_salt").encode()).hexdigest()
+        return hmac.compare_digest(stored_hash, legacy)
+    return False
+
 
 def create_jwt_token(user_id: str, email: str, username: str) -> str:
     """Generates a signed JWT access token."""
@@ -64,6 +82,9 @@ def token_required(f):
 def create_demo_user():
     """Creates a pre-configured demo user with sample watchlist, ratings, and profile data."""
     demo_user_id = "demo-cinephile-001"
+    existing = aws_manager.get_user_profile(demo_user_id)
+    if existing:
+        return {"user": existing, "token": create_jwt_token(demo_user_id, existing["email"], existing["username"])}
     user_data = {
         "userId": demo_user_id,
         "username": "AlexRivera",

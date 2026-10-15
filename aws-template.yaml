@@ -1,25 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
-Description: >
-  AWS CloudFormation / SAM Infrastructure Template for Movie Recommender System.
-  Provisions Amazon DynamoDB tables, Amazon S3 bucket for avatars, Amazon Cognito User Pool, and IAM execution roles.
-
+Description: CineFlix DynamoDB, private avatar storage and EC2 application role. Hosting is deployed separately.
 Parameters:
   EnvironmentName:
     Type: String
     Default: dev
-    Description: Deployment environment (e.g. dev, staging, prod)
-
+    AllowedPattern: '[a-z0-9-]{1,20}'
 Resources:
-  # ==========================================
-  # AMAZON DYNAMODB TABLES
-  # ==========================================
-
-  # 1. User Profiles Table
   MovieRecomUsersTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "MovieRecom_Users_${EnvironmentName}"
+      TableName: !Sub 'MovieRecom_Users_${EnvironmentName}'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
@@ -29,17 +21,12 @@ Resources:
           KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      Tags:
-        - Key: Project
-          Value: MovieRecommender
-        - Key: Environment
-          Value: !Ref EnvironmentName
-
-  # 2. User Watchlists & Favorites Table
   MovieRecomWatchlistsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "MovieRecom_Watchlists_${EnvironmentName}"
+      TableName: !Sub 'MovieRecom_Watchlists_${EnvironmentName}'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
@@ -51,15 +38,12 @@ Resources:
           KeyType: HASH
         - AttributeName: imdbID
           KeyType: RANGE
-      Tags:
-        - Key: Project
-          Value: MovieRecommender
-
-  # 3. User Ratings & Reviews Table
   MovieRecomRatingsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub "MovieRecom_Ratings_${EnvironmentName}"
+      TableName: !Sub 'MovieRecom_Ratings_${EnvironmentName}'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
@@ -71,36 +55,24 @@ Resources:
           KeyType: HASH
         - AttributeName: imdbID
           KeyType: RANGE
-      Tags:
-        - Key: Project
-          Value: MovieRecommender
-
-  # ==========================================
-  # AMAZON S3 BUCKET FOR USER AVATARS
-  # ==========================================
-
   MovieRecomAvatarBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub "movierecom-avatars-${AWS::AccountId}-${EnvironmentName}"
+      BucketName: !Sub 'cineflix-avatars-${AWS::AccountId}-${AWS::Region}-${EnvironmentName}'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders:
-              - '*'
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - HEAD
-            AllowedOrigins:
-              - '*'
-            MaxAge: 3600
-
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   MovieRecomAvatarBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -108,129 +80,64 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: PublicReadForAvatars
-            Effect: Allow
+          - Effect: Deny
             Principal: '*'
-            Action: 's3:GetObject'
-            Resource: !Sub "${MovieRecomAvatarBucket.Arn}/avatars/*"
-
-  # ==========================================
-  # AMAZON COGNITO AUTHENTICATION
-  # ==========================================
-
-  MovieRecomUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: !Sub "MovieRecom_UserPool_${EnvironmentName}"
-      AutoVerifiedAttributes:
-        - email
-      UsernameAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: false
-          RequireUppercase: true
-      Schema:
-        - Name: email
-          AttributeDataType: String
-          Mutable: true
-          Required: true
-        - Name: preferred_username
-          AttributeDataType: String
-          Mutable: true
-          Required: false
-
-  MovieRecomUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      ClientName: !Sub "MovieRecom_WebClient_${EnvironmentName}"
-      UserPoolId: !Ref MovieRecomUserPool
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - ALLOW_USER_SRP_AUTH
-        - ALLOW_USER_PASSWORD_AUTH
-        - ALLOW_REFRESH_TOKEN_AUTH
-
-  # ==========================================
-  # IAM BACKEND SERVICE EXECUTION ROLE
-  # ==========================================
-
+            Action: 's3:*'
+            Resource:
+              - !GetAtt MovieRecomAvatarBucket.Arn
+              - !Sub '${MovieRecomAvatarBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
   MovieRecomBackendRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "MovieRecom_BackendRole_${EnvironmentName}"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - lambda.amazonaws.com
-                - ecs-tasks.amazonaws.com
-                - apprunner.amazonaws.com
-            Action: 'sts:AssumeRole'
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-        - PolicyName: MovieRecomDynamoDBAccess
+        - PolicyName: CineFlixDataAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - 'dynamodb:GetItem'
-                  - 'dynamodb:PutItem'
-                  - 'dynamodb:UpdateItem'
-                  - 'dynamodb:DeleteItem'
-                  - 'dynamodb:Query'
-                  - 'dynamodb:Scan'
-                  - 'dynamodb:DescribeTable'
+                  - dynamodb:DescribeTable
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
                 Resource:
                   - !GetAtt MovieRecomUsersTable.Arn
                   - !GetAtt MovieRecomWatchlistsTable.Arn
                   - !GetAtt MovieRecomRatingsTable.Arn
-        - PolicyName: MovieRecomS3Access
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt MovieRecomAvatarBucket.Arn
               - Effect: Allow
                 Action:
-                  - 's3:PutObject'
-                  - 's3:GetObject'
-                  - 's3:PutObjectAcl'
-                  - 's3:ListBucket'
-                Resource:
-                  - !GetAtt MovieRecomAvatarBucket.Arn
-                  - !Sub "${MovieRecomAvatarBucket.Arn}/*"
-
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${MovieRecomAvatarBucket.Arn}/avatars/*'
+  MovieRecomInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref MovieRecomBackendRole
 Outputs:
   DynamoDBUsersTable:
-    Description: "Users DynamoDB Table Name"
     Value: !Ref MovieRecomUsersTable
-    Export:
-      Name: MovieRecomUsersTable
-
   DynamoDBWatchlistsTable:
-    Description: "Watchlists DynamoDB Table Name"
     Value: !Ref MovieRecomWatchlistsTable
-    Export:
-      Name: MovieRecomWatchlistsTable
-
   DynamoDBRatingsTable:
-    Description: "Ratings DynamoDB Table Name"
     Value: !Ref MovieRecomRatingsTable
-    Export:
-      Name: MovieRecomRatingsTable
-
   S3AvatarBucketName:
-    Description: "S3 Bucket Name for user avatars"
     Value: !Ref MovieRecomAvatarBucket
-
-  CognitoUserPoolId:
-    Description: "Cognito User Pool ID"
-    Value: !Ref MovieRecomUserPool
-
-  CognitoClientId:
-    Description: "Cognito App Client ID"
-    Value: !Ref MovieRecomUserPoolClient
+  BackendInstanceProfile:
+    Value: !Ref MovieRecomInstanceProfile

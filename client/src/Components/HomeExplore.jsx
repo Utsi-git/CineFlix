@@ -97,7 +97,7 @@ const GENRE_MOVIES = {
 const HomeExplore = () => {
   const [activeGenre, setActiveGenre] = useState('Trending');
   const history = useHistory();
-  const { openAuthModal, loginDemo } = useAuth();
+  const { loginDemo } = useAuth();
 
   const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' viewBox='0 0 200 300'%3E%3Crect width='200' height='300' fill='%231a1a2e'/%3E%3C/svg%3E";
 

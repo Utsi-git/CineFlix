@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../services/api';
 
 const AuthContext = createContext();
 
@@ -11,13 +11,11 @@ export const AuthProvider = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState('demo'); // 'demo' | 'login' | 'register'
 
-  // Configure Axios default auth header whenever token changes
+  // Persist the token; the API client attaches it only to our own API.
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       localStorage.setItem('mrs_token', token);
     } else {
-      delete axios.defaults.headers.common['Authorization'];
       localStorage.removeItem('mrs_token');
     }
   }, [token]);
@@ -41,7 +39,6 @@ export const AuthProvider = ({ children }) => {
       const savedToken = localStorage.getItem('mrs_token');
       if (savedToken) {
         try {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
           const res = await axios.get('/api/auth/me');
           if (isMounted && res.data && res.data.user) {
             setUser(res.data.user);
@@ -71,6 +68,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (identifier, password) => {
     const res = await axios.post('/api/auth/login', { identifier, password });
     if (res.data && res.data.token) {
+      localStorage.setItem('mrs_token', res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setIsAuthModalOpen(false);
@@ -82,6 +80,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     const res = await axios.post('/api/auth/register', userData);
     if (res.data && res.data.token) {
+      localStorage.setItem('mrs_token', res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setIsAuthModalOpen(false);
@@ -93,6 +92,7 @@ export const AuthProvider = ({ children }) => {
   const loginDemo = async () => {
     const res = await axios.post('/api/auth/demo-login');
     if (res.data && res.data.token) {
+      localStorage.setItem('mrs_token', res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setIsAuthModalOpen(false);
@@ -105,7 +105,6 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('mrs_token');
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   const updateProfile = async (profileData) => {
@@ -115,6 +114,12 @@ export const AuthProvider = ({ children }) => {
       return res.data.user;
     }
     throw new Error('Failed to update profile');
+  };
+
+  const refreshProfile = async () => {
+    const res = await axios.get('/api/auth/me');
+    setUser(res.data.user);
+    return res.data.user;
   };
 
   const refreshAwsStatus = async () => {
@@ -150,6 +155,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateProfile,
         refreshAwsStatus,
+        refreshProfile,
         isAuthModalOpen,
         authModalTab,
         openAuthModal,

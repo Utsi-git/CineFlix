@@ -1,125 +1,143 @@
-# AWS Cloud Services Architecture & Setup Guide
+# CineFlix cloud setup (corrected)
 
-This Movie Recommender System integrates three core **Amazon Web Services (AWS)** primitives to deliver scalable user management, high-performance data storage, and media hosting:
+The app uses React, Flask JWT authentication, DynamoDB and private S3 storage.
+Cognito is not integrated. This template creates storage and an EC2 IAM instance
+profile, not the EC2 web server or CloudFront distribution.
 
-```
-                          ┌───────────────────────────────────────┐
-                          │         React Frontend (Client)       │
-                          │   (Real-time OMDb, Profile, Watchlist)│
-                          └───────────────────┬───────────────────┘
-                                              │ Axios / JWT
-                                              ▼
-                          ┌───────────────────────────────────────┐
-                          │          Flask Python Backend         │
-                          │        (Boto3 AWS SDK Integration)    │
-                          └───────┬───────────┼───────────┬───────┘
-                                  │           │           │
-            ┌─────────────────────┘           │           └─────────────────────┐
-            ▼                                 ▼                                 ▼
-┌─────────────────────────┐       ┌─────────────────────────┐       ┌─────────────────────────┐
-│     Amazon DynamoDB     │       │        Amazon S3        │       │      Amazon Cognito     │
-│   (Serverless NoSQL)    │       │     (Object Storage)    │       │     (User Identity)     │
-├─────────────────────────┤       ├─────────────────────────┤       ├─────────────────────────┤
-│ • MovieRecom_Users      │       │ • Profile Avatars       │       │ • Secure Authentication │
-│ • MovieRecom_Watchlists │       │ • Presigned PUT URLs    │       │ • JWT Verification      │
-│ • MovieRecom_Ratings    │       │ • Public Read CDN Host  │       │ • Password Policies     │
-└─────────────────────────┘       └─────────────────────────┘       └─────────────────────────┘
+## Prerequisites
+
+- Python 3.11 or 3.12; Node.js with npm; your own OMDb key.
+- A group Git repository preserving member contributions.
+- AWS deployment permissions (or an institution-provided role).
+
+## Local development
+
+From the project root in PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
 ```
 
----
+Set that generated value as JWT_SECRET in .env. Set OMDB_API_KEY to your key.
+Keep APP_ENV=development and STORAGE_MODE=local. Existing local SQLite records
+are retained; legacy password hashes are upgraded after successful login.
+Tokens signed with an old JWT_SECRET require logging in again.
 
-## 1. AWS Services Utilized
+```powershell
+Copy-Item client/.env.example client/.env
+```
 
-### A. Amazon DynamoDB
-- **`MovieRecom_Users` Table**:
-  - **Partition Key**: `userId` (String)
-  - Stores user profile information, bio, full name, email, avatar URL, and favorite genres.
-- **`MovieRecom_Watchlists` Table**:
-  - **Partition Key**: `userId` (String)
-  - **Sort Key**: `imdbID` (String)
-  - Stores bookmarked movies with posters, year, genres, watch status (`plan_to_watch`, `completed`), and `isFavorite` flag.
-- **`MovieRecom_Ratings` Table**:
-  - **Partition Key**: `userId` (String)
-  - **Sort Key**: `imdbID` (String)
-  - Stores movie ratings (1.0 to 10.0) and user written reviews.
-  - Feeds directly into the **Personalized Machine Learning Recommendation Engine** to calculate personalized movie vectors!
+Set REACT_APP_OMDB_API_KEY in client/.env. This key is browser-visible; never put
+AWS credentials or JWT_SECRET in any REACT_APP variable.
 
-### B. Amazon S3 (Simple Storage Service)
-- **Bucket**: `movierecom-user-avatars`
-- Handles user avatar and custom profile image uploads.
-- Configured with CORS for direct client uploads or secure backend uploads via `boto3.client('s3').put_object`.
+```powershell
+cd client
+npm ci
+npm run build
+cd ..
+.\.venv\Scripts\python.exe app.py
+```
 
-### C. Amazon Cognito
-- Provides cloud-native user registration, verification, sign-in, and JWT issuance.
-- Configurable via `COGNITO_USER_POOL_ID` and `COGNITO_CLIENT_ID`.
+Open http://localhost:5000. Alternatively run npm start in client for the React
+development server on port 3000; its proxy targets Flask on port 5000.
+The model is rebuilt from Datasets/tmdb.csv at startup. Pickle files and the
+notebooks are not needed for application execution.
 
----
+## Provision AWS storage (new stack)
 
-## 2. Zero-Friction Dual-Mode Architecture
-
-The application comes with an **automatic dual-mode fallback**:
-1. **Live AWS Mode**: When `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are provided in `.env`, the backend connects to your live AWS account, automatically creates the DynamoDB tables and S3 buckets if they don't exist yet, and streams live data to AWS.
-2. **Local Emulation Mode (Offline / Dev)**: If AWS credentials are not yet set, the app transparently uses a local SQLite & local storage emulator with the **exact same DynamoDB schema and API contracts**. The UI displays an active **AWS Status Badge** indicating the current mode and connectivity health.
-
----
-
-## 3. How to Deploy to AWS Cloud
-
-### Option 1: 1-Click AWS CloudFormation / SAM Deployment
-The repository includes `aws-template.yaml`. You can deploy all DynamoDB tables, S3 bucket, and Cognito User Pool with one AWS CLI command:
+Use an AWS CLI profile or authenticated terminal. Never embed keys in source.
+The region in these examples is ap-southeast-2.
 
 ```bash
-# Validate template
-aws cloudformation validate-template --template-body file://aws-template.yaml
-
-# Deploy the stack
-aws cloudformation deploy \
-  --template-file aws-template.yaml \
-  --stack-name movie-recommender-stack \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides EnvironmentName=dev
+aws cloudformation validate-template --template-body file://aws-template.yaml --region ap-southeast-2
+aws cloudformation deploy --template-file aws-template.yaml --stack-name cineflix-storage-dev --capabilities CAPABILITY_IAM --parameter-overrides EnvironmentName=dev --region ap-southeast-2
+aws cloudformation describe-stacks --stack-name cineflix-storage-dev --query "Stacks[0].Outputs" --region ap-southeast-2
 ```
 
-### Option 2: Configure Existing AWS Credentials in `.env`
-Copy `.env.example` to `.env` in the root directory:
+Copy the exact output names into your deployment environment:
+
+```dotenv
+APP_ENV=production
+STORAGE_MODE=aws
+ENABLE_DEMO_LOGIN=false
+AWS_REGION=ap-southeast-2
+DYNAMODB_USERS_TABLE=MovieRecom_Users_dev
+DYNAMODB_WATCHLIST_TABLE=MovieRecom_Watchlists_dev
+DYNAMODB_RATINGS_TABLE=MovieRecom_Ratings_dev
+S3_AVATAR_BUCKET=<S3AvatarBucketName output>
+OMDB_API_KEY=<your own key>
+JWT_SECRET=<unique random secret of at least 32 characters>
+```
+
+For manually provisioned resources, use their actual names instead of the _dev
+names. Infrastructure is created by CloudFormation, not application startup.
+All three tables must be ACTIVE and the bucket reachable or startup fails.
+Use the BackendInstanceProfile output as the EC2 instance profile. It trusts
+EC2 and grants only the table/object actions the application needs.
+Boto3 uses the instance role; do not set static AWS access keys on EC2.
+Local AWS development may use AWS_PROFILE, or temporary credentials externally.
+
+Deploy the React build and Flask/Gunicorn service using the EC2/Nginx/CloudFront
+steps supplied in chat. On Linux the backend command can be:
 
 ```bash
-cp .env.example .env
+gunicorn --workers 1 --threads 4 --timeout 120 --bind 127.0.0.1:8000 app:app
 ```
 
-Edit `.env` and paste your AWS credentials:
-```ini
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-DYNAMODB_USERS_TABLE=MovieRecom_Users
-DYNAMODB_WATCHLIST_TABLE=MovieRecom_Watchlists
-DYNAMODB_RATINGS_TABLE=MovieRecom_Ratings
-S3_AVATAR_BUCKET=movierecom-user-avatars
+Supply environment variables via your service manager or an appropriately
+protected .env file. Production rejects local storage and weak/default signing
+keys. Do not run Flask's development server for production hosting.
+
+CloudFront must forward Authorization, query strings and all needed HTTP
+methods; disable caching for /api/*. API responses also send Cache-Control:
+no-store. Configure HTTPS for viewers and, for end-to-end encryption, the origin.
+Restrict CORS_ORIGINS to explicitly permitted frontend origins if using a separate
+frontend host; same-origin deployment does not require cross-origin requests.
+
+## Storage and identity behaviour
+
+- AWS mode never falls back to SQLite or filesystem uploads. Failed operations
+  produce HTTP 503 and do not falsely report success.
+- /api/aws/status verifies table and bucket reachability. It does not prove that
+  every read/write permission works; test the actual features as well.
+- Profiles update individual fields. Password hashes, email, username and creation
+  time survive bio, genre and avatar edits.
+- Login supports email or username, case-insensitively. New AWS registrations
+  reserve identity keys transactionally in the users table to prevent duplicates.
+  Extra records whose userId begins identity# are expected, not separate users.
+  Existing records are found with a paginated compatibility scan; at larger scale
+  migrate all identities rather than relying on scans.
+- Passwords use individually salted scrypt hashes. Legacy SHA-256 hashes are only
+  accepted for migration and replaced immediately after a successful login.
+- S3 blocks public access and disables ACLs. Uploads store avatarKey; profile reads
+  produce fresh 15-minute signed URLs. Refresh the profile to renew an expired URL.
+- Avatar uploads accept validated JPEG, PNG and WebP images up to 5 MiB.
+- Demo login is disabled by default in production. If enabled, it is a deliberately
+  shared account; use individual registrations to demonstrate account isolation.
+- Resources have Retain policies. Deleting the stack will not delete the tables
+  or avatar bucket and retained resources may continue to incur charges.
+- Do not blindly update an already-deployed older stack with this revised template:
+  compare the change set and preserve any existing data and authentication resources.
+
+## Checks before submission
+
+Register a fresh account, log out/in, edit its profile, upload an avatar, add/remove
+watchlist items, toggle favorites and save ratings. Inspect real DynamoDB items
+and S3 objects. Restart the backend and repeat login. Test public endpoints in
+Postman, not only through the client. Leave hosting available until marking ends.
+
+## Automated verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest tests -q
+cd client
+npm test -- --watchAll=false --runInBand
+npm run build
 ```
 
-Restart the Flask backend:
-```bash
-python app.py
-```
-The console will print:
-`[AWSManager] Successfully connected to AWS in region us-east-1`
-and the web application will immediately switch to live AWS Cloud mode!
-
----
-
-## 4. Testing with LocalStack (Local AWS Cloud)
-If you wish to test live AWS SDK calls locally using Docker without using real AWS credits:
-
-```bash
-docker run --rm -it -p 4566:4566 -p 4510-4559:4510-4559 localstack/localstack
-```
-
-Set the endpoint in your `.env`:
-```ini
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=test
-AWS_SECRET_ACCESS_KEY=test
-DYNAMODB_ENDPOINT_URL=http://localhost:4566
-S3_ENDPOINT_URL=http://localhost:4566
-```
+Backend AWS tests use Moto (mock DynamoDB/S3), not a real AWS account. CloudFormation
+validation/deployment and end-to-end live AWS testing must be done in your account.

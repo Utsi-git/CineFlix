@@ -8,3 +8,15 @@
 /client/README.md
 .env
 client/.env
+
+# Runtime files and local secrets
+*.db
+*.db-shm
+*.db-wal
+.venv/
+.pytest_cache/
+__pycache__/
+client/public/uploads/
+client/build/
+client/.env.*
+!client/.env.example

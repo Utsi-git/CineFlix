@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const RatingModal = ({ isOpen, onClose, movie, onRatingSaved, initialRating = 8, initialReview = '' }) => {
