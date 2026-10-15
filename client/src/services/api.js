@@ -1,10 +1,25 @@
 import axios from 'axios';
 
-// Keep authentication on same-origin API requests, never OMDb or other hosts.
-const api = axios.create();
+// In production (Vercel), point API calls to the deployed Flask backend.
+// Set REACT_APP_API_BASE_URL in Vercel environment variables.
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+
+const api = axios.create({ baseURL: BASE_URL });
+
 api.interceptors.request.use((config) => {
-  const url = new URL(config.url, window.location.origin);
-  const isOwnApi = url.origin === window.location.origin && url.pathname.startsWith('/api/');
+  const resolvedBase = BASE_URL || window.location.origin;
+  const resolvedUrl = config.url?.startsWith('http')
+    ? config.url
+    : resolvedBase + (config.url || '');
+
+  let isOwnApi = false;
+  try {
+    const url = new URL(resolvedUrl);
+    isOwnApi = url.pathname.startsWith('/api/');
+  } catch (_) {
+    isOwnApi = (config.url || '').startsWith('/api/');
+  }
+
   config.headers = config.headers || {};
   // Remove any inherited Authorization header before deciding where it belongs.
   for (const headers of [config.headers, config.headers.common]) {
