@@ -9,6 +9,40 @@ const AVAILABLE_GENRES = [
   'Horror', 'Animation', 'Adventure', 'Romance', 'Mystery'
 ];
 
+const OMDB_BASE_URL = "https://www.omdbapi.com/";
+const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY || "7acedfb7";
+
+const enrichWithPosters = async (recs) => {
+  if (!recs || !recs.length) return [];
+  try {
+    const enriched = await Promise.all(
+      recs.map(async (item) => {
+        if (item.poster && item.poster !== 'N/A') return item;
+        try {
+          const clean = String(item.title).trim();
+          let res = await axios.get(OMDB_BASE_URL, {
+            params: { t: clean, apikey: OMDB_API_KEY }
+          });
+          if (res.data?.Response === 'True' && res.data.Poster && res.data.Poster !== 'N/A') {
+            return { ...item, poster: res.data.Poster, year: res.data.Year || item.year };
+          }
+          // Fallback search
+          res = await axios.get(OMDB_BASE_URL, {
+            params: { s: clean, type: 'movie', apikey: OMDB_API_KEY }
+          });
+          if (res.data?.Response === 'True' && res.data.Search?.[0]?.Poster && res.data.Search[0].Poster !== 'N/A') {
+            return { ...item, poster: res.data.Search[0].Poster, year: res.data.Search[0].Year || item.year };
+          }
+        } catch (e) {}
+        return item;
+      })
+    );
+    return enriched;
+  } catch (e) {
+    return recs;
+  }
+};
+
 const Profile = () => {
   const { user, isAuthenticated, openAuthModal, loginDemo, updateProfile, refreshProfile, awsStatus, refreshAwsStatus } = useAuth();
   const location = useLocation();
@@ -61,7 +95,11 @@ const Profile = () => {
         // 3. Fetch Personalized Recommendations
         const recRes = await axios.get('/api/user/recommendations');
         if (recRes.data && recRes.data.recommendations) {
-          setPersonalizedRecs(recRes.data.recommendations);
+          const raw = recRes.data.recommendations;
+          setPersonalizedRecs(raw);
+          enrichWithPosters(raw).then(withPosters => {
+            setPersonalizedRecs(withPosters);
+          });
         }
       } catch (err) {
         console.error('Error fetching profile data:', err);
@@ -90,7 +128,11 @@ const Profile = () => {
       // Refresh personalized recs
       const recRes = await axios.get('/api/user/recommendations');
       if (recRes.data && recRes.data.recommendations) {
-        setPersonalizedRecs(recRes.data.recommendations);
+        const raw = recRes.data.recommendations;
+        setPersonalizedRecs(raw);
+        enrichWithPosters(raw).then(withPosters => {
+          setPersonalizedRecs(withPosters);
+        });
       }
     } catch (err) {
       console.error('Failed to update genres:', err);
@@ -521,20 +563,30 @@ const Profile = () => {
                   <div className="personalized-grid">
                     {personalizedRecs.map((rec, i) => (
                       <div key={i} className="personalized-card">
-                        <div className="rec-card-badge">{rec.badge || 'Taste Match'}</div>
-                        <div className="rec-card-main">
-                          <h4>{rec.title}</h4>
-                          <span className="rec-card-year">{rec.year}</span>
-                          <p className="rec-card-reason">
-                            <i className="fa fa-lightbulb-o"></i> {rec.reason}
-                          </p>
+                        <div className="rec-card-poster-wrapper">
+                          <img
+                            src={rec.poster && rec.poster !== 'N/A' ? rec.poster : fallbackPoster}
+                            alt={rec.title}
+                            className="rec-card-poster"
+                            onError={(e) => { e.target.onerror = null; e.target.src = fallbackPoster; }}
+                          />
+                          <div className="rec-card-badge-overlay">{rec.badge || 'Taste Match'}</div>
                         </div>
-                        <Link
-                          to={{ pathname: '/recommend', state: { MovieName: rec.title } }}
-                          className="rec-card-btn"
-                        >
-                          Explore Movie & ML Similar →
-                        </Link>
+                        <div className="rec-card-content">
+                          <div className="rec-card-main">
+                            <h4>{rec.title}</h4>
+                            <span className="rec-card-year">{rec.year}</span>
+                            <p className="rec-card-reason">
+                              <i className="fa fa-lightbulb-o"></i> {rec.reason}
+                            </p>
+                          </div>
+                          <Link
+                            to={{ pathname: '/recommend', state: { MovieName: rec.title } }}
+                            className="rec-card-btn"
+                          >
+                            Explore & Recommendations →
+                          </Link>
+                        </div>
                       </div>
                     ))}
                   </div>

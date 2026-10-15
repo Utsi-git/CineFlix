@@ -1,21 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from '../services/api';
+
+const OMDB_BASE_URL = "https://www.omdbapi.com/";
+const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY || "7acedfb7";
 
 const RecommendationTiles = (props) => {
-    const fallbackPoster = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300' viewBox='0 0 200 300'%3E%3Crect width='200' height='300' fill='%231a1a1a'/%3E%3Ccircle cx='100' cy='120' r='35' fill='%23333'/%3E%3Cpath d='M90 105 L115 120 L90 135 Z' fill='%23777'/%3E%3Ctext x='50%25' y='180' dominant-baseline='middle' text-anchor='middle' fill='%23aaa' font-family='sans-serif' font-size='13' font-weight='bold'%3ENo Poster%3C/text%3E%3C/svg%3E";
+    const [poster, setPoster] = useState(
+        props.PosterPath && props.PosterPath !== 'N/A' ? props.PosterPath : null
+    );
+
+    useEffect(() => {
+        if (props.PosterPath && props.PosterPath !== 'N/A') {
+            setPoster(props.PosterPath);
+            return;
+        }
+
+        let isMounted = true;
+        const fetchPoster = async () => {
+            if (!props.MovieName) return;
+            try {
+                const clean = String(props.MovieName).trim();
+                let res = await axios.get(OMDB_BASE_URL, {
+                    params: { t: clean, apikey: OMDB_API_KEY }
+                });
+                if (res.data?.Response === 'True' && res.data.Poster && res.data.Poster !== 'N/A') {
+                    if (isMounted) setPoster(res.data.Poster);
+                    return;
+                }
+                // Fallback search by title
+                res = await axios.get(OMDB_BASE_URL, {
+                    params: { s: clean, type: 'movie', apikey: OMDB_API_KEY }
+                });
+                if (res.data?.Response === 'True' && res.data.Search?.[0]?.Poster && res.data.Search[0].Poster !== 'N/A') {
+                    if (isMounted) setPoster(res.data.Search[0].Poster);
+                }
+            } catch (err) {
+                // Silently fallback to placeholder
+            }
+        };
+
+        fetchPoster();
+        return () => { isMounted = false; };
+    }, [props.PosterPath, props.MovieName]);
+
+    const fallbackPoster = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80";
 
     return (
         <div className="Recommendation_Tiles">
-            <div className="image-holder">
-                <img
-                    alt={props.MovieName}
-                    src={props.PosterPath && props.PosterPath !== 'N/A' ? props.PosterPath : fallbackPoster}
-                    onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = fallbackPoster;
-                    }}
-                />
-            </div>
             <Link
                 onClick={() => {
                     if (props.setToggle) {
@@ -26,8 +58,21 @@ const RecommendationTiles = (props) => {
                     pathname: "/recommend",
                     state: { MovieName: props.MovieName }
                 }}
+                className="rec-tile-link"
             >
-                <p title={props.MovieName}>{props.MovieName}</p>
+                <div className="image-holder">
+                    <img
+                        alt={props.MovieName}
+                        src={poster || fallbackPoster}
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = fallbackPoster;
+                        }}
+                    />
+                </div>
+                <div className="rec-tile-title-box">
+                    <p title={props.MovieName}>{props.MovieName}</p>
+                </div>
             </Link>
         </div>
     );

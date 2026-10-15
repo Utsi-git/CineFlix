@@ -7,7 +7,7 @@ import AboutMovie from "./AboutMovie";
 import Accordian from './Accordian';
 
 const OMDB_BASE_URL = "https://www.omdbapi.com/";
-const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY;
+const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY || "7acedfb7";
 
 // Helper function to query OMDb API with multiple fallbacks
 async function fetchOmdbMovie(title) {
