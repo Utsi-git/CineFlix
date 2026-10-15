@@ -44,7 +44,7 @@ const enrichWithPosters = async (recs) => {
 };
 
 const Profile = () => {
-  const { user, isAuthenticated, openAuthModal, loginDemo, updateProfile, refreshProfile, awsStatus, refreshAwsStatus } = useAuth();
+  const { user, isAuthenticated, openAuthModal, loginDemo, updateProfile, refreshProfile } = useAuth();
   const location = useLocation();
 
   // Parse active tab from URL query params (e.g. ?tab=watchlist)

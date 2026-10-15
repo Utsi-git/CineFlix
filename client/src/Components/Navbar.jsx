@@ -8,7 +8,7 @@ const OMDB_BASE_URL = "https://www.omdbapi.com/";
 const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY || process.env.REACT_APP_API_KEY;
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout, openAuthModal, loginDemo, awsStatus } = useAuth();
+  const { user, isAuthenticated, logout, openAuthModal, loginDemo } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   // Search state
@@ -96,7 +96,6 @@ const Navbar = () => {
     history.push({ pathname: '/recommend', state: { MovieName: title } });
   };
 
-  const isAwsLive = awsStatus?.isLiveAWS;
   const fallbackThumb = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='48' viewBox='0 0 32 48'%3E%3Crect width='32' height='48' fill='%23e2e8f0'/%3E%3C/svg%3E";
 
   return (
