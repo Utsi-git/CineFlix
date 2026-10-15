@@ -132,7 +132,7 @@ const Profile = () => {
         bio: bioInput.trim()
       });
       setIsEditingBio(false);
-      setProfileMsg('Profile updated in Amazon DynamoDB!');
+      setProfileMsg('Profile updated successfully!');
       setTimeout(() => setProfileMsg(''), 3000);
     } catch (err) {
       console.error('Profile update failed:', err);
@@ -173,7 +173,7 @@ const Profile = () => {
         <div className="unauth-card">
           <div className="unauth-icon"><i className="fa fa-user-circle"></i></div>
           <h2>Join or Sign In to CineMatch</h2>
-          <p>Create your custom user profile, sync your movie watchlists to Amazon DynamoDB, and unlock personalized AI recommendations tailored to your taste.</p>
+          <p>Create your custom user profile, save your favorite movies and watchlists, and unlock personalized AI recommendations tailored to your taste.</p>
           <div className="unauth-buttons">
             <button className="auth-primary-btn demo-btn" onClick={() => loginDemo()}>
               <i className="fa fa-bolt"></i> 1-Click Demo Cinephile
@@ -201,7 +201,7 @@ const Profile = () => {
               alt={user.username}
               className="profile-hero-avatar"
             />
-            <label className="avatar-upload-badge" title="Upload new photo to AWS S3">
+            <label className="avatar-upload-badge" title="Upload new photo">
               <i className={`fa ${avatarUploading ? 'fa-spinner fa-spin' : 'fa-camera'}`}></i>
               <input
                 type="file"
@@ -217,9 +217,6 @@ const Profile = () => {
             <div className="profile-title-row">
               <h2>{user.fullName || user.username}</h2>
               <span className="profile-username-tag">@{user.username}</span>
-              <span className="profile-aws-chip">
-                <i className="fa fa-cloud"></i> {awsStatus?.mode || 'AWS Cloud'}
-              </span>
             </div>
 
             <p className="profile-email"><i className="fa fa-envelope-o"></i> {user.email}</p>
@@ -242,7 +239,7 @@ const Profile = () => {
                 />
                 <div className="profile-edit-actions">
                   <button className="btn-secondary btn-sm" onClick={() => setIsEditingBio(false)}>Cancel</button>
-                  <button className="auth-primary-btn btn-sm" onClick={handleSaveProfileInfo}>Save to DynamoDB</button>
+                  <button className="auth-primary-btn btn-sm" onClick={handleSaveProfileInfo}>Save Changes</button>
                 </div>
               </div>
             ) : (
@@ -321,12 +318,6 @@ const Profile = () => {
         >
           <i className="fa fa-magic"></i> Recommended For You ({personalizedRecs.length})
         </button>
-        <button
-          className={`profile-tab-item ${activeTab === 'aws' ? 'active' : ''}`}
-          onClick={() => setActiveTab('aws')}
-        >
-          <i className="fa fa-cloud"></i> AWS Cloud Console
-        </button>
       </div>
 
       {/* TAB CONTENTS */}
@@ -340,7 +331,7 @@ const Profile = () => {
               <div className="watchlist-tab-pane">
                 <div className="pane-header">
                   <h3>Your Movie Watchlist</h3>
-                  <p>Stored in Amazon DynamoDB table <code>MovieRecom_Watchlists</code>.</p>
+                  <p>Movies you have saved to watch later.</p>
                 </div>
 
                 {watchlist.length === 0 ? (
@@ -402,7 +393,7 @@ const Profile = () => {
               <div className="favorites-tab-pane">
                 <div className="pane-header">
                   <h3>Your Favorite Masterpieces</h3>
-                  <p>Pinned favorites synced with Amazon DynamoDB.</p>
+                  <p>Your pinned favorite movies.</p>
                 </div>
 
                 {favoritesList.length === 0 ? (
@@ -456,7 +447,7 @@ const Profile = () => {
               <div className="ratings-tab-pane">
                 <div className="pane-header">
                   <h3>Your Movie Ratings & Reviews</h3>
-                  <p>Stored in Amazon DynamoDB table <code>MovieRecom_Ratings</code> to power your taste profile.</p>
+                  <p>Your ratings and reviews that power your personalized recommendations.</p>
                 </div>
 
                 {ratings.length === 0 ? (
@@ -516,7 +507,7 @@ const Profile = () => {
                   <p>
                     Machine learning recommendation vectors computed from your favorite genres (
                     <strong>{(user.favoriteGenres || []).join(', ')}</strong>
-                    ) and high-rated movies in DynamoDB.
+                    ) and your top-rated movies.
                   </p>
                 </div>
 
@@ -542,7 +533,7 @@ const Profile = () => {
                           to={{ pathname: '/recommend', state: { MovieName: rec.title } }}
                           className="rec-card-btn"
                         >
-                          Explore Movie & ML Similar \u2192
+                          Explore Movie & ML Similar →
                         </Link>
                       </div>
                     ))}
@@ -550,112 +541,9 @@ const Profile = () => {
                 )}
               </div>
             )}
-
-            {/* 5. AWS CLOUD CONSOLE TAB */}
-            {activeTab === 'aws' && (
-              <div className="aws-tab-pane">
-                <div className="pane-header">
-                  <div className="aws-title-row">
-                    <h3>AWS Cloud Architecture & Diagnostics</h3>
-                    <button className="aws-refresh-btn" onClick={() => refreshAwsStatus()}>
-                      <i className="fa fa-refresh"></i> Refresh AWS Status
-                    </button>
-                  </div>
-                  <p>Real-time status of Amazon DynamoDB, Amazon S3, and Amazon Cognito services integrated into this app.</p>
-                </div>
-
-                {/* AWS Status Grid */}
-                <div className="aws-cards-grid">
-                  {/* DynamoDB Card */}
-                  <div className="aws-card">
-                    <div className="aws-card-icon ddb-icon">
-                      <i className="fa fa-database"></i>
-                    </div>
-                    <h4>Amazon DynamoDB</h4>
-                    <div className="aws-card-status">
-                      <span className="status-indicator-dot online"></span>
-                      <span>{awsStatus?.services?.dynamodb?.status || 'Active'}</span>
-                    </div>
-                    <p className="aws-card-desc">Serverless NoSQL database managing user profiles, movie watchlists, and star rating vectors.</p>
-                    <div className="aws-table-list">
-                      <strong>Configured Tables:</strong>
-                      <ul>
-                        {(awsStatus?.services?.dynamodb?.tables || [
-                          'MovieRecom_Users',
-                          'MovieRecom_Watchlists',
-                          'MovieRecom_Ratings'
-                        ]).map((tbl, i) => (
-                          <li key={i}><code>{tbl}</code></li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* S3 Card */}
-                  <div className="aws-card">
-                    <div className="aws-card-icon s3-icon">
-                      <i className="fa fa-cube"></i>
-                    </div>
-                    <h4>Amazon S3</h4>
-                    <div className="aws-card-status">
-                      <span className="status-indicator-dot online"></span>
-                      <span>{awsStatus?.services?.s3?.status || 'Active'}</span>
-                    </div>
-                    <p className="aws-card-desc">High-durability object storage for custom profile avatars and movie media assets.</p>
-                    <div className="aws-table-list">
-                      <strong>Avatar Bucket:</strong>
-                      <p><code>{awsStatus?.services?.s3?.bucket || 'movierecom-user-avatars'}</code></p>
-                    </div>
-                  </div>
-
-                  {/* Cognito Card */}
-                  <div className="aws-card">
-                    <div className="aws-card-icon cognito-icon">
-                      <i className="fa fa-shield"></i>
-                    </div>
-                    <h4>Amazon Cognito</h4>
-                    <div className="aws-card-status">
-                      <span className="status-indicator-dot online"></span>
-                      <span>{awsStatus?.services?.cognito?.status || 'Active'}</span>
-                    </div>
-                    <p className="aws-card-desc">Cloud identity service with JWT tokens, password policies, and OAuth 2.0 verification.</p>
-                    <div className="aws-table-list">
-                      <strong>User Pool:</strong>
-                      <p><code>{awsStatus?.services?.cognito?.userPoolId || 'Local JWT Provider'}</code></p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AWS Deployment & Template Info */}
-                <div className="aws-deployment-box">
-                  <div className="deployment-header">
-                    <h4><i className="fa fa-code"></i> CloudFormation / SAM Infrastructure as Code</h4>
-                    <span className="deployment-file-tag">aws-template.yaml</span>
-                  </div>
-                  <p>
-                    You can deploy all AWS resources (DynamoDB tables with on-demand billing, S3 bucket with CORS, and Cognito User Pool) to your own AWS account using a single command:
-                  </p>
-                  <pre className="code-snippet-box">
-{`# 1-Click AWS Deployment
-aws cloudformation deploy \\
-  --template-file aws-template.yaml \\
-  --stack-name movie-recommender-stack \\
-  --capabilities CAPABILITY_IAM \\
-  --parameter-overrides EnvironmentName=dev`}
-                  </pre>
-                  <div className="aws-iac-links">
-                    <p>For credentials setup, IAM permissions, and LocalStack configuration, refer to the included documentation:</p>
-                    <div className="iac-badges">
-                      <span className="iac-badge"><i className="fa fa-book"></i> AWS_SETUP.md</span>
-                      <span className="iac-badge"><i className="fa fa-file-text-o"></i> aws-template.yaml</span>
-                      <span className="iac-badge"><i className="fa fa-cog"></i> .env.example</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
+
       </div>
     </div>
   );

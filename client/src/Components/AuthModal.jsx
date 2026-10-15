@@ -92,11 +92,11 @@ const AuthModal = () => {
 
         <div className="auth-modal-header">
           <div className="auth-modal-badge">
-            <i className="fa fa-cloud" aria-hidden="true" style={{ marginRight: '6px' }}></i>
-            AWS Powered Profile & Recommendations
+            <i className="fa fa-star" aria-hidden="true" style={{ marginRight: '6px' }}></i>
+            AI-Powered Cinephile Profile
           </div>
           <h3>Welcome to CineMatch</h3>
-          <p>Create your custom cinephile profile, sync watchlists to DynamoDB, and get tailored AI recommendations.</p>
+          <p>Create your custom cinephile profile, save your watchlist, and get tailored AI recommendations.</p>
         </div>
 
         <div className="auth-modal-tabs">
@@ -143,10 +143,10 @@ const AuthModal = () => {
             </div>
 
             <ul className="demo-features-list">
-              <li><i className="fa fa-check-circle"></i> Pre-loaded DynamoDB Watchlist (Inception, Interstellar, Dune)</li>
+              <li><i className="fa fa-check-circle"></i> Pre-loaded Watchlist (Inception, Interstellar, Dune)</li>
               <li><i className="fa fa-check-circle"></i> Pre-rated 10/10 Movies with custom reviews</li>
               <li><i className="fa fa-check-circle"></i> Instant personalized ML recommendations calculated on launch</li>
-              <li><i className="fa fa-check-circle"></i> Test AWS S3 avatar upload & DynamoDB edits without typing</li>
+              <li><i className="fa fa-check-circle"></i> Custom profile avatar upload & interactive watchlist edits</li>
             </ul>
 
             <button
@@ -261,7 +261,7 @@ const AuthModal = () => {
             </div>
 
             <button type="submit" className="auth-primary-btn" disabled={loading}>
-              {loading ? 'Creating AWS Profile...' : 'Create Profile & Sync to AWS'}
+              {loading ? 'Creating Profile...' : 'Create Profile & Get Started'}
             </button>
 
             <p className="auth-footer-prompt">

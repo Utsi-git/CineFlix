@@ -169,17 +169,8 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Right: AWS Badge + Auth ──────────────────────── */}
+        {/* ── Right: Auth ─────────────────────────────────── */}
         <div className="flix-navbar-right">
-          <Link
-            to="/profile?tab=aws"
-            className={`flix-aws-badge ${isAwsLive ? 'live' : 'emulated'}`}
-            id="nav-aws-badge"
-            title="AWS Cloud Status"
-          >
-            <span className="flix-aws-dot"></span>
-            {isAwsLive ? 'AWS Live' : 'AWS Ready'}
-          </Link>
 
           {isAuthenticated && user ? (
             <div className="flix-user-menu">
@@ -209,7 +200,6 @@ const Navbar = () => {
                   <Link to="/profile?tab=watchlist" className="flix-dropdown-item" id="dd-watchlist">🔖 Watchlist</Link>
                   <Link to="/profile?tab=ratings" className="flix-dropdown-item" id="dd-ratings">⭐ My Ratings</Link>
                   <Link to="/profile?tab=recommendations" className="flix-dropdown-item" id="dd-recs">✨ For You (AI)</Link>
-                  <Link to="/profile?tab=aws" className="flix-dropdown-item" id="dd-aws">☁️ AWS Console</Link>
                   <div className="flix-dropdown-divider" />
                   <button className="flix-dropdown-item flix-logout" id="dd-logout" onClick={handleLogout}>
                     🚪 Log Out

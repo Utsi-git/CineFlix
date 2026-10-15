@@ -99,7 +99,7 @@ const AboutMovie = (props) => {
                 await axios.delete(`/api/user/watchlist/${encodeURIComponent(imdbID)}`);
                 setIsInWatchlist(false);
                 setIsFavorite(false);
-                setActionMsg('Removed from DynamoDB Watchlist');
+                setActionMsg('Removed from Watchlist');
             } else {
                 await axios.post('/api/user/watchlist', {
                     imdbID: imdbID,
@@ -110,7 +110,7 @@ const AboutMovie = (props) => {
                     isFavorite: isFavorite
                 });
                 setIsInWatchlist(true);
-                setActionMsg('Added to Amazon DynamoDB Watchlist \u2713');
+                setActionMsg('Added to Watchlist ✓');
             }
             setTimeout(() => setActionMsg(''), 3000);
         } catch (err) {
@@ -136,7 +136,7 @@ const AboutMovie = (props) => {
             setIsFavorite(res.data.isFavorite);
             if (res.data.isFavorite) {
                 setIsInWatchlist(true);
-                setActionMsg('Marked as Favorite in DynamoDB ♥');
+                setActionMsg('Marked as Favorite ♥');
             } else {
                 setActionMsg('Removed from Favorites');
             }
@@ -149,7 +149,7 @@ const AboutMovie = (props) => {
     const handleRatingSaved = (savedRating) => {
         setUserRating(savedRating.rating);
         setUserReview(savedRating.review || '');
-        setActionMsg(`Rating (${savedRating.rating}/10) saved to Amazon DynamoDB!`);
+        setActionMsg(`Rating (${savedRating.rating}/10) saved!`);
         setTimeout(() => setActionMsg(''), 3500);
     };
 
@@ -276,7 +276,7 @@ const AboutMovie = (props) => {
                 </div>
                 {userRating && (
                     <div className="rating-item user-score-item">
-                        <span className="rating-label">Your DynamoDB Score</span>
+                        <span className="rating-label">Your Rating</span>
                         <p className="rating-val user-val">★ {userRating} / 10</p>
                     </div>
                 )}

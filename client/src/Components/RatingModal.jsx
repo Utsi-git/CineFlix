@@ -39,7 +39,7 @@ const RatingModal = ({ isOpen, onClose, movie, onRatingSaved, initialRating = 8,
       onClose();
     } catch (err) {
       console.error('Failed to save rating:', err);
-      setError('Failed to save rating to DynamoDB. Please try again.');
+      setError('Failed to save rating. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ const RatingModal = ({ isOpen, onClose, movie, onRatingSaved, initialRating = 8,
             <h3>Rate & Review</h3>
             <h4>{movie.Title || movie.title}</h4>
             <p className="rating-modal-sub">
-              Saved to Amazon DynamoDB • Enhances your personalized recommendations
+              Saved to your profile • Enhances your personalized recommendations
             </p>
           </div>
         </div>
@@ -118,7 +118,7 @@ const RatingModal = ({ isOpen, onClose, movie, onRatingSaved, initialRating = 8,
               Cancel
             </button>
             <button type="submit" className="auth-primary-btn" disabled={loading}>
-              {loading ? 'Saving to DynamoDB...' : 'Save Rating & Sync \u2713'}
+              {loading ? 'Saving...' : 'Save Rating ✓'}
             </button>
           </div>
         </form>
