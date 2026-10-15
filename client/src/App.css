@@ -143,42 +143,22 @@
   flex-direction: column; 
 }
 
-.Footer{
-  background: black;
+.Footer {
+  background: #090d16;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 13px 0px;
+  padding: 22px 16px;
+  margin-top: auto;
 }
 
-.fa{
-  color: white;
-}
-
-.footer-inner{
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  width: 100%;
-}
-.Footer .github{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 150px;
-  margin: 0px 10px;
-
-}
-.github a{
-  margin-left: 10px;
-  color: white;
-}
-
-.Footer p{
-  color: white;
-  line-height: 12px;
- display: block;
- /* height: 12px; */
+.Footer p {
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0;
+  text-align: center;
+  letter-spacing: 0.3px;
 }
 
 .Recommendations-Page{
